@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "galmc_api:item/open_cg"
+  }
+}
