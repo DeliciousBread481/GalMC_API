@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+@OnlyIn(Dist.CLIENT)
 public class OpenUIEvent {
     public static String path = null;
     public static UUID uuid=null;

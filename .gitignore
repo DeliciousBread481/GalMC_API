@@ -1,0 +1,32 @@
+# Gradle
+.gradle/
+build/
+out/
+run/
+run-data/
+src/generated/
+
+# ForgeGradle
+.forge/
+
+# IDE - IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# IDE - VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
