@@ -18,11 +18,11 @@ public class ExecuteEvent {
       if (event.side != LogicalSide.CLIENT) {
          if (event.phase == Phase.END) {
             for(Pair<UUID, String> s : commands) {
-               if (s.getLeft() == event.player.m_20148_()) {
-                  CommandSourceStack source = event.player.m_20203_().m_81348_(event.player.m_20182_()).m_81346_(event.player.m_20155_());
+               if (s.getLeft() == event.player.getUUID()) {
+                  CommandSourceStack source = event.player.createCommandSourceStack().withPosition(event.player.position()).withRotation(event.player.getRotationVector());
 
                   try {
-                     event.player.m_20194_().m_129892_().m_230957_(source, (String)s.getRight());
+                     event.player.getServer().getCommands().performPrefixedCommand(source, (String)s.getRight());
                   } catch (NullPointerException e) {
                      Galmc_api.LOGGER.error(e.getMessage());
                   }

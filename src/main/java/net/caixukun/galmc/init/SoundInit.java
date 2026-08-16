@@ -24,7 +24,7 @@ public class SoundInit {
          LOGGER.error("加载音频失败，请检查资源包");
       } else {
          for(String key : root.keySet()) {
-            REG_SOUNDS.put(key, SOUND_EVENTS.register(key, () -> SoundEvent.m_262824_(ResourceLocation.fromNamespaceAndPath("galmc_api", key))));
+            REG_SOUNDS.put(key, SOUND_EVENTS.register(key, () -> SoundEvent.createVariableRangeEvent(ResourceLocation.fromNamespaceAndPath("galmc_api", key))));
          }
 
       }

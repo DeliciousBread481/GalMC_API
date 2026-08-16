@@ -11,11 +11,11 @@ import org.jetbrains.annotations.NotNull;
 
 public class OpenUI extends Item {
    public OpenUI() {
-      super((new Item.Properties()).m_41487_(1));
+      super((new Item.Properties()).stacksTo(1));
    }
 
-   public @NotNull InteractionResultHolder<ItemStack> m_7203_(@NotNull Level p_41432_, Player p_41433_, InteractionHand p_41434_) {
-      OpenUIEvent.openCG(p_41433_.m_20148_());
-      return super.m_7203_(p_41432_, p_41433_, p_41434_);
+   public @NotNull InteractionResultHolder<ItemStack> use(@NotNull Level p_41432_, Player p_41433_, InteractionHand p_41434_) {
+      OpenUIEvent.openCG(p_41433_.getUUID());
+      return super.use(p_41432_, p_41433_, p_41434_);
    }
 }

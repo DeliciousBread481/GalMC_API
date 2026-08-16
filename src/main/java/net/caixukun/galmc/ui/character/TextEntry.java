@@ -59,16 +59,16 @@ public class TextEntry {
          if (Objects.equals(this.render_execute.get("type").getAsString(), "java")) {
             this.textMethods.execute(guiGraphics, this.render_execute.get("data").getAsString(), this, galScreen);
          } else if (Objects.equals(this.render_execute.get("type").getAsString(), "normal")) {
-            int screenWidth = galScreen.f_96543_;
-            int screenHeight = galScreen.f_96544_;
+            int screenWidth = galScreen.width;
+            int screenHeight = galScreen.height;
             galScreen.renderContain(guiGraphics, screenWidth, screenHeight, this.background);
             this.render_character(guiGraphics, galScreen);
             if (galScreen.rendtext) {
                this.render_text(guiGraphics, galScreen);
             }
          } else if (Objects.equals(this.render_execute.get("type").getAsString(), "pingyi")) {
-            int screenWidth = galScreen.f_96543_;
-            int screenHeight = galScreen.f_96544_;
+            int screenWidth = galScreen.width;
+            int screenHeight = galScreen.height;
             galScreen.renderContain(guiGraphics, screenWidth, screenHeight, this.background);
             this.render_character(guiGraphics, galScreen);
             this.move(this.render_execute.get("data").getAsJsonObject().get("new_x").getAsInt(), this.render_execute.get("data").getAsJsonObject().get("new_y").getAsInt(), this.render_execute.get("data").getAsJsonObject().get("time").getAsInt());
@@ -77,8 +77,8 @@ public class TextEntry {
                this.render_text(guiGraphics, galScreen);
             }
          } else if (Objects.equals(this.render_execute.get("type").getAsString(), "two_people")) {
-            int screenWidth = galScreen.f_96543_;
-            int screenHeight = galScreen.f_96544_;
+            int screenWidth = galScreen.width;
+            int screenHeight = galScreen.height;
             galScreen.renderContain(guiGraphics, screenWidth, screenHeight, this.background);
             this.render_character(guiGraphics, galScreen);
             ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("galmc_api", this.render_execute.get("data").getAsJsonObject().get("image").getAsString());
@@ -86,7 +86,7 @@ public class TextEntry {
             int n_y = this.render_execute.get("data").getAsJsonObject().get("y").getAsInt();
             int n_ix = this.render_execute.get("data").getAsJsonObject().get("image_x").getAsInt();
             int n_iy = this.render_execute.get("data").getAsJsonObject().get("image_y").getAsInt();
-            guiGraphics.m_280163_(resourceLocation, galScreen.getX(n_x, true), galScreen.getY(n_y, true), 0.0F, 0.0F, galScreen.getX(n_ix, false), galScreen.getY(n_iy, false), galScreen.getX(n_ix, false), galScreen.getY(n_iy, false));
+            guiGraphics.blit(resourceLocation, galScreen.getX(n_x, true), galScreen.getY(n_y, true), 0.0F, 0.0F, galScreen.getX(n_ix, false), galScreen.getY(n_iy, false), galScreen.getX(n_ix, false), galScreen.getY(n_iy, false));
             galScreen.renderUI(guiGraphics);
             if (galScreen.rendtext) {
                this.render_text(guiGraphics, galScreen);
@@ -94,8 +94,8 @@ public class TextEntry {
          }
       } catch (NullPointerException e) {
          LOGGER.error(this.text + ":特殊渲染失败或者资源文件格式有误", e);
-         int screenWidth = galScreen.f_96543_;
-         int screenHeight = galScreen.f_96544_;
+         int screenWidth = galScreen.width;
+         int screenHeight = galScreen.height;
          galScreen.renderContain(guiGraphics, screenWidth, screenHeight, this.background);
          this.render_character(guiGraphics, galScreen);
          if (galScreen.rendtext) {
@@ -130,7 +130,7 @@ public class TextEntry {
          }
 
          if (galScreen.fonta != null) {
-            guiGraphics.m_280614_(galScreen.fonta, Component.m_237113_(this.rs), galScreen.getX(120, true), galScreen.getY(900, true), 16777215, true);
+            guiGraphics.drawString(galScreen.fonta, Component.literal(this.rs), galScreen.getX(120, true), galScreen.getY(900, true), 16777215, true);
             if (Objects.equals(this.rs, b)) {
                --this.p1;
                if (galScreen.auto && this.p1 <= 0) {
@@ -145,13 +145,13 @@ public class TextEntry {
             a = "";
          }
 
-         guiGraphics.m_280614_(galScreen.fonta, Component.m_237113_(a), galScreen.getX(75, true), galScreen.getY(750, true), 16777215, true);
+         guiGraphics.drawString(galScreen.fonta, Component.literal(a), galScreen.getX(75, true), galScreen.getY(750, true), 16777215, true);
       }
 
    }
 
    private void render_character(GuiGraphics guiGraphics, GalScreen galScreen) {
-      guiGraphics.m_280163_(this.character, galScreen.getX(this.x, true), galScreen.getY(this.y, true), 0.0F, 0.0F, galScreen.getX(this.ix, false), galScreen.getY(this.iy, false), galScreen.getX(this.ix, false), galScreen.getY(this.iy, false));
+      guiGraphics.blit(this.character, galScreen.getX(this.x, true), galScreen.getY(this.y, true), 0.0F, 0.0F, galScreen.getX(this.ix, false), galScreen.getY(this.iy, false), galScreen.getX(this.ix, false), galScreen.getY(this.iy, false));
    }
 
    public boolean is_sound() {

@@ -45,7 +45,7 @@ public class Character {
          try {
             ResourceLocation resourceLocation = ResourceLocation.fromNamespaceAndPath("galmc_api", resource);
             this.id = resource;
-            this.readJson(Minecraft.m_91087_().m_91098_(), resourceLocation);
+            this.readJson(Minecraft.getInstance().getResourceManager(), resourceLocation);
          } catch (ResourceLocationException e) {
             LOGGER.error("资源路径不对且不符合格式", e);
             this.disabled = true;
@@ -82,9 +82,9 @@ public class Character {
    }
 
    private void readJson(ResourceManager resourceManager, ResourceLocation location) {
-      resourceManager.m_213713_(location).ifPresent((resource) -> {
+      resourceManager.getResource(location).ifPresent((resource) -> {
          try {
-            InputStream stream = resource.m_215507_();
+            InputStream stream = resource.open();
 
             try {
                JsonElement json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
@@ -139,8 +139,8 @@ public class Character {
    public void render(GuiGraphics guiGraphics, GalScreen galScreen) {
       if (!this.disabled && Objects.equals(this.render_execute, "null")) {
          if (this.is_cg()) {
-            int screenWidth = galScreen.f_96543_;
-            int screenHeight = galScreen.f_96544_;
+            int screenWidth = galScreen.width;
+            int screenHeight = galScreen.height;
             galScreen.renderContain(guiGraphics, screenWidth, screenHeight, ((TextEntry)this.TEXTS.get(this.pointer)).background);
          } else {
             ((TextEntry)this.TEXTS.get(this.pointer)).render(guiGraphics, galScreen);

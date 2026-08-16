@@ -72,7 +72,7 @@ public class Galmc_api {
    }
 
    private void addCreative(BuildCreativeModeTabContentsEvent event) {
-      if (event.getTabKey() == CreativeModeTabs.f_256869_) {
+      if (event.getTabKey() == CreativeModeTabs.TOOLS_AND_UTILITIES) {
          event.accept(ItemInit.GUI_TEST);
       }
 
@@ -92,7 +92,7 @@ public class Galmc_api {
       @SubscribeEvent
       public static void onClientSetup(FMLClientSetupEvent event) {
          Galmc_api.LOGGER.info("HELLO FROM CLIENT SETUP");
-         Galmc_api.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.m_91087_().m_91094_().m_92546_());
+         Galmc_api.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
       }
    }
 }

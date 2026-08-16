@@ -25,21 +25,21 @@ public class OpenUIEvent {
    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
       if (event.side == LogicalSide.CLIENT) {
          if (cg) {
-            circle = (Integer)Minecraft.m_91087_().f_91066_.m_231928_().m_231551_();
-            Minecraft.m_91087_().f_91066_.m_231928_().m_231514_(4);
-            Minecraft.m_91087_().f_91066_.m_92169_();
-            Minecraft.m_91087_().m_5741_();
-            if (event.player.m_20148_() == uuid) {
-               Minecraft.m_91087_().m_91152_(new CGGalleryScreen(uuid));
+            circle = (Integer)Minecraft.getInstance().options.guiScale().get();
+            Minecraft.getInstance().options.guiScale().set(4);
+            Minecraft.getInstance().options.save();
+            Minecraft.getInstance().resizeDisplay();
+            if (event.player.getUUID() == uuid) {
+               Minecraft.getInstance().setScreen(new CGGalleryScreen(uuid));
                uuid = null;
                cg = false;
             }
-         } else if (path != null && uuid != null && event.player.m_20148_() == uuid) {
-            circle = (Integer)Minecraft.m_91087_().f_91066_.m_231928_().m_231551_();
-            Minecraft.m_91087_().f_91066_.m_231928_().m_231514_(4);
-            Minecraft.m_91087_().f_91066_.m_92169_();
-            Minecraft.m_91087_().m_5741_();
-            Minecraft.m_91087_().m_91152_(new GalScreen(path, uuid));
+         } else if (path != null && uuid != null && event.player.getUUID() == uuid) {
+            circle = (Integer)Minecraft.getInstance().options.guiScale().get();
+            Minecraft.getInstance().options.guiScale().set(4);
+            Minecraft.getInstance().options.save();
+            Minecraft.getInstance().resizeDisplay();
+            Minecraft.getInstance().setScreen(new GalScreen(path, uuid));
             path = null;
             uuid = null;
          }
@@ -51,9 +51,9 @@ public class OpenUIEvent {
    @OnlyIn(Dist.CLIENT)
    public static void onScreenClosing(ScreenEvent.Closing event) {
       if (circle != -1) {
-         Minecraft.m_91087_().f_91066_.m_231928_().m_231514_(circle);
-         Minecraft.m_91087_().f_91066_.m_92169_();
-         Minecraft.m_91087_().m_5741_();
+         Minecraft.getInstance().options.guiScale().set(circle);
+         Minecraft.getInstance().options.save();
+         Minecraft.getInstance().resizeDisplay();
          circle = -1;
       }
 
@@ -62,7 +62,7 @@ public class OpenUIEvent {
       try {
          Screen parentScreen = (Screen)screenScreenMap.get(currentScreen);
          if (parentScreen != null) {
-            Minecraft.m_91087_().m_91152_(parentScreen);
+            Minecraft.getInstance().setScreen(parentScreen);
             event.setCanceled(true);
             screenScreenMap.clear();
          }

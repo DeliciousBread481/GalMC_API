@@ -44,7 +44,7 @@ public class CharacterMethods {
 
    static class Tools {
       public static void renderContain(GuiGraphics guiGraphics, int screenWidth, int screenHeight, ResourceLocation BACKGROUND_TEXTURE) {
-         guiGraphics.m_280509_(0, 0, screenWidth, screenHeight, -16777216);
+         guiGraphics.fill(0, 0, screenWidth, screenHeight, -16777216);
          float scaleX = (float)screenWidth / 1920.0F;
          float scaleY = (float)screenHeight / 1080.0F;
          float scale = Math.min(scaleX, scaleY);
@@ -52,9 +52,9 @@ public class CharacterMethods {
          int renderHeight = (int)(1080.0F * scale);
          int renderX = (screenWidth - renderWidth) / 2;
          int renderY = (screenHeight - renderHeight) / 2;
-         RenderSystem.setShader(GameRenderer::m_172817_);
+         RenderSystem.setShader(GameRenderer::getPositionTexShader);
          RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
-         guiGraphics.m_280411_(BACKGROUND_TEXTURE, renderX, renderY, renderWidth, renderHeight, 0.0F, 0.0F, 1920, 1080, 1920, 1080);
+         guiGraphics.blit(BACKGROUND_TEXTURE, renderX, renderY, renderWidth, renderHeight, 0.0F, 0.0F, 1920, 1080, 1920, 1080);
       }
 
       private static int getX(int x, int width) {

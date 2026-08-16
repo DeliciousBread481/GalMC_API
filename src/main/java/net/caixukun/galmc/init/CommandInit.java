@@ -20,31 +20,31 @@ public class CommandInit {
    private static final SuggestionProvider<CommandSourceStack> RESOURCE_PATH_SUGGESTIONS = (context, builder) -> {
       List<String> data = GalResourceManger.getText();
       data.addAll(GalResourceManger.getCCg());
-      return SharedSuggestionProvider.m_82970_(data, builder);
+      return SharedSuggestionProvider.suggest(data, builder);
    };
 
    public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
-      dispatcher.register((LiteralArgumentBuilder)Commands.m_82127_("play_galgame").then(Commands.m_82129_("path", StringArgumentType.greedyString()).suggests(RESOURCE_PATH_SUGGESTIONS).executes((context) -> executeResourceCommand(context))));
+      dispatcher.register((LiteralArgumentBuilder)Commands.literal("play_galgame").then(Commands.argument("path", StringArgumentType.greedyString()).suggests(RESOURCE_PATH_SUGGESTIONS).executes((context) -> executeResourceCommand(context))));
    }
 
    private static int executeResourceCommand(CommandContext<CommandSourceStack> context) {
       String resourcePath = StringArgumentType.getString(context, "path");
       CommandSourceStack source = (CommandSourceStack)context.getSource();
-      Entity var4 = source.m_81373_();
+      Entity var4 = source.getEntity();
       if (var4 instanceof ServerPlayer player) {
          String newPath = resourcePath.replace("galmc_api:", "").replace("\"", "");
-         OpenUIEvent.openUI(newPath, player.m_20148_());
+         OpenUIEvent.openUI(newPath, player.getUUID());
          return 1;
       } else {
-         MinecraftServer server = source.m_81377_();
-         List<ServerPlayer> players = server.m_6846_().m_11314_();
+         MinecraftServer server = source.getServer();
+         List<ServerPlayer> players = server.getPlayerList().getPlayers();
          if (!players.isEmpty() && players.size() == 1) {
             ServerPlayer singlePlayer = (ServerPlayer)players.get(0);
             String newPath = resourcePath.replace("galmc_api:", "").replace("\"", "");
-            OpenUIEvent.openUI(newPath, singlePlayer.m_20148_());
+            OpenUIEvent.openUI(newPath, singlePlayer.getUUID());
             return 1;
          } else {
-            source.m_81352_(Component.m_237113_("不能为多个玩家播放galgame"));
+            source.sendFailure(Component.literal("不能为多个玩家播放galgame"));
             return 0;
          }
       }
