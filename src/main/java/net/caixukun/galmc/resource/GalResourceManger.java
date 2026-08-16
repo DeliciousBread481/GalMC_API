@@ -2,15 +2,14 @@ package net.caixukun.galmc.resource;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.caixukun.galmc.Galmc_api;
-import net.minecraftforge.fml.loading.FMLPaths;
-import org.apache.logging.log4j.LogManager;
-
+import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -18,127 +17,275 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
 import java.util.zip.ZipFile;
+import net.minecraftforge.fml.loading.FMLPaths;
+import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
 
 public class GalResourceManger {
-    public static List<String> text = new ArrayList<>();
-    public static List<String> cg = new ArrayList<>();
-    public static Path zipFile = null;
-    public static String cg_background = null;
-    public static void handleResourcePack() {
-        try {
-            // 源目录：.minecraft/config/yourmod/resourcepacks/
-            Path srcDir = FMLPaths.CONFIGDIR.get().resolve(Galmc_api.MODID).resolve("resourcepacks");
-            if (!Files.exists(srcDir)) return ;
+   public static List<String> text = new ArrayList();
+   public static List<String> cg = new ArrayList();
+   public static Path zipFile = null;
+   public static String cg_background = null;
+   public static final Logger LOGGER = LogUtils.getLogger();
+   public static String TARGET_PACK_ID = null;
 
-            // 找到第一个zip文件
-            try (Stream<Path> stream = Files.list(srcDir)) {
-                Optional<Path> firstZip = stream.filter(p -> p.toString().endsWith(".zip")).findFirst();
-                if (firstZip.isEmpty()) return ;
+   public static void handleResourcePack() {
+      try {
+         Path srcDir = FMLPaths.CONFIGDIR.get().resolve("galmc_api").resolve("resourcepacks");
+         if (!Files.exists(srcDir, new LinkOption[0])) {
+            Files.createDirectories(srcDir);
+         }
 
-                Path zipPath = firstZip.get();
-                // 目标目录：.minecraft/resourcepacks/
-                Path targetDir = FMLPaths.GAMEDIR.get().resolve("resourcepacks");
-                if (!Files.exists(targetDir)) Files.createDirectories(targetDir);
-                Path targetPath = targetDir.resolve(zipPath.getFileName());
+         Stream<Path> stream = Files.list(srcDir);
 
-                // 复制文件（覆盖已存在）
-                Files.copy(zipPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+         label65: {
+            try {
+               Optional<Path> firstZip = stream.filter((p) -> p.toString().endsWith(".zip")).findFirst();
+               if (firstZip.isEmpty()) {
+                  break label65;
+               }
 
-                GalResourceManger.zipFile = zipPath;
+               Path zipPath = (Path)firstZip.get();
+               Path targetDir = FMLPaths.GAMEDIR.get().resolve("resourcepacks");
+               if (!Files.exists(targetDir, new LinkOption[0])) {
+                  Files.createDirectories(targetDir);
+               }
 
+               Path targetPath = targetDir.resolve(zipPath.getFileName());
+               TARGET_PACK_ID = Paths.get(targetPath.toString()).getFileName().toString();
+               Files.copy(zipPath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+               zipFile = zipPath;
+            } catch (Throwable var7) {
+               if (stream != null) {
+                  try {
+                     stream.close();
+                  } catch (Throwable var6) {
+                     var7.addSuppressed(var6);
+                  }
+               }
+
+               throw var7;
             }
-        } catch (Exception e) {
-            // 使用你的日志系统记录错误
-            LogManager.getLogger().error("Failed to handle resource pack", e);
 
-        }
-    }
+            if (stream != null) {
+               stream.close();
+            }
 
-    public static JsonObject get_sound(){
-        try (ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile())) {
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
-                String name = entry.getName();
-                // 匹配 assets/<namespace>/sounds.json
-                if (name.startsWith("assets/") && name.endsWith("/sounds.json")) {
-                    String[] parts = name.split("/");
-                    if (parts.length >= 3) {
-                        String namespace = parts[1]; // 获取命名空间
-                        try (InputStream is = zipFile.getInputStream(entry);
-                             InputStreamReader reader = new InputStreamReader(is)) {
-                            return JsonParser.parseReader(reader).getAsJsonObject();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
+            return;
+         }
+
+         if (stream != null) {
+            stream.close();
+         }
+
+      } catch (Exception e) {
+         LogManager.getLogger().error("Failed to handle resource pack", e);
+      }
+   }
+
+   public static JsonObject get_sound() {
+      try {
+         try {
+            ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile());
+
+            label90: {
+               JsonObject var8;
+               try {
+                  Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+                  while(true) {
+                     if (!entries.hasMoreElements()) {
+                        break label90;
+                     }
+
+                     ZipEntry entry = (ZipEntry)entries.nextElement();
+                     String name = entry.getName();
+                     if (name.startsWith("assets/") && name.endsWith("/sounds.json")) {
+                        String[] parts = name.split("/");
+                        if (parts.length >= 3) {
+                           String namespace = parts[1];
+
+                           try {
+                              InputStream is = zipFile.getInputStream(entry);
+
+                              try {
+                                 InputStreamReader reader = new InputStreamReader(is);
+
+                                 try {
+                                    var8 = JsonParser.parseReader(reader).getAsJsonObject();
+                                 } catch (Throwable var13) {
+                                    try {
+                                       reader.close();
+                                    } catch (Throwable var12) {
+                                       var13.addSuppressed(var12);
+                                    }
+
+                                    throw var13;
+                                 }
+
+                                 reader.close();
+                              } catch (Throwable var14) {
+                                 if (is != null) {
+                                    try {
+                                       is.close();
+                                    } catch (Throwable var11) {
+                                       var14.addSuppressed(var11);
+                                    }
+                                 }
+
+                                 throw var14;
+                              }
+
+                              if (is != null) {
+                                 is.close();
+                              }
+                              break;
+                           } catch (IOException e) {
+                              throw new RuntimeException(e);
+                           }
                         }
-                    }
-                }
-            }
-        } catch (ZipException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return null;
-    }
+                     }
+                  }
+               } catch (Throwable var16) {
+                  try {
+                     zipFile.close();
+                  } catch (Throwable var10) {
+                     var16.addSuppressed(var10);
+                  }
 
-    public static List<String> getText(){
-        if(GalResourceManger.text.isEmpty()){
-            try (ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile())) {
-                Enumeration<? extends ZipEntry> entries = zipFile.entries();
-                while (entries.hasMoreElements()) {
-                    ZipEntry entry = entries.nextElement();
-                    String name = entry.getName();
-                    // 匹配 assets/<namespace>/sounds.json
-                    if (name.startsWith("assets/galmc_api/data/text/") && name.endsWith(".json")) {
-                        name = name.replace("assets/galmc_api/","");
-                        GalResourceManger.text.add(name);
-                    }
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                  throw var16;
+               }
+
+               zipFile.close();
+               return var8;
             }
-        }
-        return GalResourceManger.text;
-    }
-    public static List<String> getCCg(){
-        if(GalResourceManger.cg.isEmpty()){
-            try (ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile())) {
-                Enumeration<? extends ZipEntry> entries = zipFile.entries();
-                while (entries.hasMoreElements()) {
-                    ZipEntry entry = entries.nextElement();
-                    String name = entry.getName();
-                    // 匹配 assets/<namespace>/sounds.json
-                    if (name.startsWith("assets/galmc_api/data/cg/") && name.endsWith(".json")) {
-                        name = name.replace("assets/galmc_api/","");
-                        GalResourceManger.cg.add(name);
-                    }
-                }
+
+            zipFile.close();
+         } catch (IOException e) {
+            LogManager.getLogger().error("Failed to handle resource pack", e);
+         }
+      } catch (NullPointerException e) {
+         LogManager.getLogger().warn("没有资源包加载", e);
+      }
+
+      return null;
+   }
+
+   public static List<String> getText() {
+      if (text.isEmpty()) {
+         try {
+            try {
+               ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile());
+
+               try {
+                  Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+                  while(entries.hasMoreElements()) {
+                     ZipEntry entry = (ZipEntry)entries.nextElement();
+                     String name = entry.getName();
+                     if (name.startsWith("assets/galmc_api/data/text/") && name.endsWith(".json")) {
+                        name = name.replace("assets/galmc_api/", "");
+                        text.add(name);
+                     }
+                  }
+               } catch (Throwable var5) {
+                  try {
+                     zipFile.close();
+                  } catch (Throwable var4) {
+                     var5.addSuppressed(var4);
+                  }
+
+                  throw var5;
+               }
+
+               zipFile.close();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+               LogManager.getLogger().error("Failed to handle resource pack", e);
             }
-        }
-        return GalResourceManger.cg;
-    }
-    public static String getCgUI(){
-        if(GalResourceManger.cg_background==null){
-            try (ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile())) {
-                Enumeration<? extends ZipEntry> entries = zipFile.entries();
-                while (entries.hasMoreElements()) {
-                    ZipEntry entry = entries.nextElement();
-                    String name = entry.getName();
-                    // 匹配 assets/<namespace>/sounds.json
-                    if (name.startsWith("assets/galmc_api/texture/gui/") && name.endsWith("cg_background.png")) {
-                        name = name.replace("assets/galmc_api/","");
-                        GalResourceManger.cg_background = name;
-                    }
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+         } catch (NullPointerException e) {
+            LogManager.getLogger().warn("没有资源包加载", e);
+         }
+      }
+
+      return text;
+   }
+
+   public static List<String> getCCg() {
+      if (cg.isEmpty()) {
+         try {
+            try {
+               ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile());
+
+               try {
+                  Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+                  while(entries.hasMoreElements()) {
+                     ZipEntry entry = (ZipEntry)entries.nextElement();
+                     String name = entry.getName();
+                     if (name.startsWith("assets/galmc_api/data/cg/") && name.endsWith(".json")) {
+                        name = name.replace("assets/galmc_api/", "");
+                        cg.add(name);
+                     }
+                  }
+               } catch (Throwable var5) {
+                  try {
+                     zipFile.close();
+                  } catch (Throwable var4) {
+                     var5.addSuppressed(var4);
+                  }
+
+                  throw var5;
+               }
+
+               zipFile.close();
+            } catch (Exception e) {
+               LogManager.getLogger().error("Failed to handle resource pack", e);
             }
-        }
-        return GalResourceManger.cg_background;
-    }
+         } catch (NullPointerException e) {
+            LogManager.getLogger().warn("没有资源包加载", e);
+         }
+      }
+
+      return cg;
+   }
+
+   public static String getCgUI() {
+      if (cg_background == null) {
+         try {
+            try {
+               ZipFile zipFile = new ZipFile(GalResourceManger.zipFile.toFile());
+
+               try {
+                  Enumeration<? extends ZipEntry> entries = zipFile.entries();
+
+                  while(entries.hasMoreElements()) {
+                     ZipEntry entry = (ZipEntry)entries.nextElement();
+                     String name = entry.getName();
+                     if (name.startsWith("assets/galmc_api/texture/gui/") && name.endsWith("cg_background.png")) {
+                        name = name.replace("assets/galmc_api/", "");
+                        cg_background = name;
+                     }
+                  }
+               } catch (Throwable var5) {
+                  try {
+                     zipFile.close();
+                  } catch (Throwable var4) {
+                     var5.addSuppressed(var4);
+                  }
+
+                  throw var5;
+               }
+
+               zipFile.close();
+            } catch (Exception e) {
+               LogManager.getLogger().error("Failed to handle resource pack", e);
+            }
+         } catch (NullPointerException e) {
+            LogManager.getLogger().warn("没有资源包加载", e);
+         }
+      }
+
+      return cg_background;
+   }
 }

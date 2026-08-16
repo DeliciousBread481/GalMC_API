@@ -1,0 +1,10 @@
+Manifest-Version: 1.0
+Specification-Title: galmc_api
+Specification-Vendor: Trump_Caixukun
+Specification-Version: 1
+Implementation-Title: GalMC_API
+Implementation-Version: 0.1_test
+Implementation-Vendor: Trump_Caixukun
+Implementation-Timestamp: 2026-03-15T13:47:59+0800
+MixinConfigs: galmc_api.mixins.json
+

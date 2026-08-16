@@ -1,7 +1,9 @@
 package net.caixukun.galmc.ui;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.caixukun.galmc.Galmc_api;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import net.caixukun.galmc.resource.GalResourceManger;
 import net.caixukun.galmc.ui.character.Character;
 import net.minecraft.client.Minecraft;
@@ -13,224 +15,177 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.function.Consumer;
-
-/**
- * CG 鉴赏屏幕，每页9个缩略图，支持翻页，缩略图保持原图比例并居中显示。
- */
 public class CGGalleryScreen extends Screen {
+   private static final int PAGE_SIZE = 6;
+   private static final int THUMBNAIL_SPACING = 10;
+   private static final float THUMBNAIL_ASPECT_RATIO = 1.7777778F;
+   private int thumbnailWidth;
+   private int thumbnailHeight;
+   private List<Character> cgList = new ArrayList();
+   private int currentPage = 0;
+   private int totalPages;
+   private List<Character> currentPageCGs;
+   private UUID uuid;
+   private Button prevPageButton;
+   private Button nextPageButton;
+   private List<CGThumbnailButton> thumbnailButtons = new ArrayList();
 
-    private static final int PAGE_SIZE = 6;
-    private static final int THUMBNAIL_SPACING = 10;      // 缩略图之间的间距
-    private static final float THUMBNAIL_ASPECT_RATIO = 16.0f / 9.0f; // 16:9比例
-    private int thumbnailWidth;      // 缩略图宽度（动态计算）
-    private int thumbnailHeight;     // 缩略图高度（动态计算）
+   public CGGalleryScreen(UUID uuid) {
+      super(Component.m_237113_("CG鉴赏"));
 
-    private List<Character> cgList = new ArrayList<>();
+      for(String path : GalResourceManger.getCCg()) {
+         Character c = new Character(path);
+         if (c.init()) {
+            this.cgList.add(c);
+         }
+      }
 
-    private int currentPage = 0;
-    private int totalPages;
-    private List<Character> currentPageCGs;
-    private UUID uuid;
-    private Button prevPageButton;
-    private Button nextPageButton;
-    private List<CGThumbnailButton> thumbnailButtons = new ArrayList<>();
+      this.uuid = uuid;
+      this.totalPages = (int)Math.ceil((double)this.cgList.size() / (double)6.0F);
+      if (this.totalPages == 0) {
+         this.totalPages = 1;
+      }
 
-    public CGGalleryScreen(UUID uuid) {
-        super(Component.literal("CG鉴赏"));
-        for(String path : GalResourceManger.getCCg()){
-            Character c = new Character(path);
-            if(c.init()){
-                cgList.add(c);
+      this.updateCurrentPageCGs();
+   }
+
+   protected void m_7856_() {
+      super.m_7856_();
+      int maxThumbnailWidth = (this.f_96543_ - 40) / 3;
+      this.thumbnailWidth = Math.min(200, maxThumbnailWidth);
+      this.thumbnailHeight = (int)((float)this.thumbnailWidth / 1.7777778F);
+      int gridWidth = 3 * this.thumbnailWidth + 20;
+      int startX = (this.f_96543_ - gridWidth) / 2;
+      int startY = 60;
+      this.thumbnailButtons.clear();
+
+      for(int i = 0; i < 6; ++i) {
+         int row = i / 3;
+         int col = i % 3;
+         int x = startX + col * (this.thumbnailWidth + 10);
+         int y = startY + row * (this.thumbnailHeight + 10);
+         CGThumbnailButton button = new CGThumbnailButton(x, y, this.thumbnailWidth, this.thumbnailHeight, (Character)null, (btn) -> {
+            CGThumbnailButton clickedButton = (CGThumbnailButton)btn;
+            if (clickedButton.getCharacter() != null) {
+               Minecraft.m_91087_().m_91152_(new GalScreen(clickedButton.Character.id, this.uuid, this));
             }
-        }
-        this.uuid = uuid;
-        this.totalPages = (int) Math.ceil((double) cgList.size() / PAGE_SIZE);
-        if (totalPages == 0) totalPages = 1;
-        updateCurrentPageCGs();
-    }
 
-    @Override
-    protected void init() {
-        super.init();
+         });
+         this.m_142416_(button);
+         this.thumbnailButtons.add(button);
+      }
 
-        int maxThumbnailWidth = (this.width - 4 * THUMBNAIL_SPACING) / 3; // 左右各留一个间距的边距
-        thumbnailWidth = Math.min(200, maxThumbnailWidth); // 限制最大宽度200，避免太大
-        thumbnailHeight = (int) (thumbnailWidth / THUMBNAIL_ASPECT_RATIO); // 根据16:9计算高度
+      this.prevPageButton = Button.m_253074_(Component.m_237113_("<"), (btn) -> this.turnPage(-1)).m_252987_(this.getX(60), this.getY(40), 40, 20).m_253136_();
+      this.m_142416_(this.prevPageButton);
+      this.nextPageButton = Button.m_253074_(Component.m_237113_(">"), (btn) -> this.turnPage(1)).m_252987_(this.getX(1800), this.getY(40), 40, 20).m_253136_();
+      this.m_142416_(this.nextPageButton);
+      this.updatePageDisplay();
+   }
 
-        // 计算网格的起始位置（居中，但从顶部开始）
-        int gridWidth = 3 * thumbnailWidth + 2 * THUMBNAIL_SPACING;
-        int startX = (this.width - gridWidth) / 2;
-        int startY = 60; // 从顶部60像素开始，留出标题空间
+   private void turnPage(int delta) {
+      int newPage = this.currentPage + delta;
+      if (newPage >= 0 && newPage < this.totalPages) {
+         this.currentPage = newPage;
+         this.updateCurrentPageCGs();
+         this.updatePageDisplay();
+      }
 
-        thumbnailButtons.clear();
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            int row = i / 3;
-            int col = i % 3;
-            int x = startX + col * (thumbnailWidth + THUMBNAIL_SPACING);
-            int y = startY + row * (thumbnailHeight + THUMBNAIL_SPACING);
+   }
 
-            // 方法1：使用 final 临时变量（推荐）
-            final int index = i; // 用于调试，如果需要索引的话
-            CGThumbnailButton button = new CGThumbnailButton(
-                    x, y, thumbnailWidth, thumbnailHeight,
-                    null,
-                    btn -> {
-                        // 注意：这里要通过 btn 参数获取按钮实例，而不是使用外部的 button 变量
-                        CGThumbnailButton clickedButton = (CGThumbnailButton) btn;
-                        if (clickedButton.getCharacter() != null) {  // 注意方法名应该是 getCgEntry() 而不是 getCharacter()
-                            Minecraft.getInstance().setScreen(new GalScreen(clickedButton.Character.id,this.uuid,this));
-                        }
-                    }
-            );
-            addRenderableWidget(button);
-            thumbnailButtons.add(button);
-        }
+   private void updateCurrentPageCGs() {
+      int fromIndex = this.currentPage * 6;
+      int toIndex = Math.min(fromIndex + 6, this.cgList.size());
+      this.currentPageCGs = this.cgList.subList(fromIndex, toIndex);
+   }
 
+   private void updatePageDisplay() {
+      for(int i = 0; i < 6; ++i) {
+         CGThumbnailButton btn = (CGThumbnailButton)this.thumbnailButtons.get(i);
+         if (i < this.currentPageCGs.size()) {
+            btn.setCharacter((Character)this.currentPageCGs.get(i));
+            btn.f_93624_ = true;
+         } else {
+            btn.setCharacter((Character)null);
+            btn.f_93624_ = false;
+         }
+      }
 
-        this.prevPageButton = Button.builder(Component.literal("<"), btn -> turnPage(-1))
-                .bounds(getX(60), getY(40), 40, 20).build();
-        addRenderableWidget(prevPageButton);
+      this.prevPageButton.f_93623_ = this.currentPage > 0;
+      this.nextPageButton.f_93623_ = this.currentPage < this.totalPages - 1;
+   }
 
-        this.nextPageButton = Button.builder(Component.literal(">"), btn -> turnPage(1))
-                .bounds(getX(1800), getY(40), 40, 20).build();
-        addRenderableWidget(nextPageButton);
+   public void m_88315_(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+      if (GalResourceManger.cg_background != null) {
+         this.renderContain(guiGraphics, this.f_96543_, this.f_96544_, ResourceLocation.fromNamespaceAndPath("galmc_api", GalResourceManger.cg_background));
+      } else {
+         this.m_280273_(guiGraphics);
+      }
 
-        updatePageDisplay();
-    }
+      guiGraphics.m_280653_(this.f_96547_, this.f_96539_, this.f_96543_ / 2, 20, 16777215);
+      int var10000 = this.currentPage + 1;
+      String pageText = var10000 + " / " + this.totalPages;
+      guiGraphics.m_280137_(this.f_96547_, pageText, this.f_96543_ / 2, this.f_96544_ - 35, 11184810);
+      super.m_88315_(guiGraphics, mouseX, mouseY, partialTick);
+   }
 
-    private void turnPage(int delta) {
-        int newPage = currentPage + delta;
-        if (newPage >= 0 && newPage < totalPages) {
-            currentPage = newPage;
-            updateCurrentPageCGs();
-            updatePageDisplay();
-        }
-    }
+   public boolean m_7043_() {
+      return false;
+   }
 
-    private void updateCurrentPageCGs() {
-        int fromIndex = currentPage * PAGE_SIZE;
-        int toIndex = Math.min(fromIndex + PAGE_SIZE, cgList.size());
-        currentPageCGs = cgList.subList(fromIndex, toIndex);
-    }
+   public void renderContain(GuiGraphics guiGraphics, int screenWidth, int screenHeight, ResourceLocation BACKGROUND_TEXTURE) {
+      guiGraphics.m_280509_(0, 0, screenWidth, screenHeight, -16777216);
+      float scaleX = (float)screenWidth / 1920.0F;
+      float scaleY = (float)screenHeight / 1080.0F;
+      float scale = Math.min(scaleX, scaleY);
+      int renderWidth = (int)(1920.0F * scale);
+      int renderHeight = (int)(1080.0F * scale);
+      int renderX = (screenWidth - renderWidth) / 2;
+      int renderY = (screenHeight - renderHeight) / 2;
+      RenderSystem.setShader(GameRenderer::m_172817_);
+      RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
+      guiGraphics.m_280411_(BACKGROUND_TEXTURE, renderX, renderY, renderWidth, renderHeight, 0.0F, 0.0F, 1920, 1080, 1920, 1080);
+   }
 
-    private void updatePageDisplay() {
-        for (int i = 0; i < PAGE_SIZE; i++) {
-            CGThumbnailButton btn = thumbnailButtons.get(i);
-            if (i < currentPageCGs.size()) {
-                btn.setCharacter(currentPageCGs.get(i));
-                btn.visible = true;
-            } else {
-                btn.setCharacter(null);
-                btn.visible = false;
-            }
-        }
-        prevPageButton.active = currentPage > 0;
-        nextPageButton.active = currentPage < totalPages - 1;
-    }
+   public int getX(int x) {
+      return (int)((double)this.f_96543_ * (double)1.0F * ((double)x * (double)1.0F / (double)1920.0F));
+   }
 
-    @Override
-    public void render(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        if(GalResourceManger.cg_background!=null){
-            renderContain(guiGraphics,this.width,this.height,ResourceLocation.fromNamespaceAndPath(Galmc_api.MODID,GalResourceManger.cg_background));
-        }else {
-            this.renderBackground(guiGraphics);
-        }
-        guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, 20, 0xFFFFFF);
-        String pageText = (currentPage + 1) + " / " + totalPages;
-        guiGraphics.drawCenteredString(this.font, pageText, this.width / 2, this.height - 35, 0xAAAAAA);
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
-    }
+   public int getY(int y) {
+      return (int)((double)this.f_96544_ * (double)1.0F * ((double)y * (double)1.0F / (double)1080.0F));
+   }
 
-    @Override
-    public boolean isPauseScreen() {
-        return false;
-    }
+   private static class CGThumbnailButton extends Button {
+      private Character Character;
 
-    public void renderContain(GuiGraphics guiGraphics, int screenWidth, int screenHeight, ResourceLocation BACKGROUND_TEXTURE) {
-        // 原理：保持图片比例，缩放到完全显示在屏幕内
+      public CGThumbnailButton(int x, int y, int width, int height, Character entry, Button.OnPress onPress) {
+         super(x, y, width, height, Component.m_237119_(), onPress, f_252438_);
+         this.Character = entry;
+      }
 
-        // 先绘制黑色背景
-        guiGraphics.fill(0, 0, screenWidth, screenHeight, 0xFF000000);
+      public void setCharacter(Character entry) {
+         this.Character = entry;
+      }
 
-        // 计算缩放比例
-        float scaleX = (float) screenWidth / 1920;
-        float scaleY = (float) screenHeight / 1080;
-        float scale = Math.min(scaleX, scaleY); // 取较小值保证完全显示
+      public Character getCharacter() {
+         return this.Character;
+      }
 
-        int renderWidth = (int) (1920 * scale);
-        int renderHeight = (int) (1080 * scale);
-        int renderX = (screenWidth - renderWidth) / 2;
-        int renderY = (screenHeight - renderHeight) / 2;
-
-        RenderSystem.setShader(GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderTexture(0, BACKGROUND_TEXTURE);
-
-        guiGraphics.blit(
-                BACKGROUND_TEXTURE,
-                renderX, renderY,
-                renderWidth, renderHeight,
-                0, 0,
-                1920, 1080,
-                1920, 1080
-        );
-    }
-
-    // ================== 内部类 ==================
-
-    /**
-     * 自定义图片按钮，用于显示 CG 缩略图。
-     * 绘制时会保持原图比例并居中显示在按钮区域内。
-     */
-    private static class CGThumbnailButton extends Button {
-        private Character Character;
-
-        public CGThumbnailButton(int x, int y, int width, int height, Character entry, OnPress onPress) {
-            super(x, y, width, height, Component.empty(), onPress, DEFAULT_NARRATION);
-            this.Character = entry;
-        }
-
-        public void setCharacter(Character entry) {
-            this.Character = entry;
-        }
-
-        public Character getCharacter() {
-            return Character;
-        }
-
-        @Override
-        protected void renderWidget(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            if (Character == null) return;
-
-            // 绘制按钮背景（半透明黑色框，可自行调整或移除）
-            guiGraphics.fill(getX(), getY(), getX() + width, getY() + height, 0x80000000);
-
-            ResourceLocation texture = Character.get().background;
+      protected void m_87963_(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+         if (this.Character != null) {
+            guiGraphics.m_280509_(this.m_252754_(), this.m_252907_(), this.m_252754_() + this.f_93618_, this.m_252907_() + this.f_93619_, Integer.MIN_VALUE);
+            ResourceLocation texture = this.Character.get().background;
             if (texture != null) {
-                int imgWidth = Character.get().ix;
-                int imgHeight = Character.get().iy;
-
-                // 计算保持原图比例且完全显示在按钮内的缩放尺寸
-                float scale = Math.min((float) width / imgWidth, (float) height / imgHeight);
-                int scaledWidth = (int) (imgWidth * scale);
-                int scaledHeight = (int) (imgHeight * scale);
-
-                // 计算居中偏移
-                int offsetX = getX() + (width - scaledWidth) / 2;
-                int offsetY = getY() + (height - scaledHeight) / 2;
-
-                // 绘制缩放后的原图（实时压缩）
-                guiGraphics.blit(texture, offsetX, offsetY, scaledWidth, scaledHeight, 0, 0, imgWidth, imgHeight, imgWidth, imgHeight);
+               int imgWidth = this.Character.get().ix;
+               int imgHeight = this.Character.get().iy;
+               float scale = Math.min((float)this.f_93618_ / (float)imgWidth, (float)this.f_93619_ / (float)imgHeight);
+               int scaledWidth = (int)((float)imgWidth * scale);
+               int scaledHeight = (int)((float)imgHeight * scale);
+               int offsetX = this.m_252754_() + (this.f_93618_ - scaledWidth) / 2;
+               int offsetY = this.m_252907_() + (this.f_93619_ - scaledHeight) / 2;
+               guiGraphics.m_280411_(texture, offsetX, offsetY, scaledWidth, scaledHeight, 0.0F, 0.0F, imgWidth, imgHeight, imgWidth, imgHeight);
             }
-        }
-    }
-    public int getX(int x){
-        return (int) (this.width*1.0*(x*1.0/1920.0));
-    }
-    public int getY(int y){
-        return (int) (this.height*1.0*(y*1.0/1080.0));
-    }
+
+         }
+      }
+   }
 }
