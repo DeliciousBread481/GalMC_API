@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.caixukun.galmc.event.ExecuteEvent;
 import net.caixukun.galmc.event.OpenUIEvent;
+import net.caixukun.galmc.network.GalNetwork;
 import net.caixukun.galmc.init.CommandInit;
 import net.caixukun.galmc.init.ItemInit;
 import net.caixukun.galmc.init.SoundInit;
@@ -24,6 +25,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber;
 import net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -43,10 +45,12 @@ public class Galmc_api {
       ItemInit.ITEMS.register(modEventBus);
       SoundInit.SOUND_EVENTS.register(modEventBus);
       SoundInit.initSounds();
+      GalNetwork.register();
       MinecraftForge.EVENT_BUS.addListener(this::registerCommands);
       modEventBus.addListener(this::commonSetup);
       MinecraftForge.EVENT_BUS.register(new ExecuteEvent());
-      MinecraftForge.EVENT_BUS.register(new OpenUIEvent());
+      DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () ->
+         MinecraftForge.EVENT_BUS.register(new OpenUIEvent()));
       modEventBus.addListener(this::addCreative);
    }
 

@@ -115,6 +115,10 @@ public class GalScreen extends Screen {
       }
 
    }
+   
+   public boolean isPauseScreen() {
+      return false;
+   }
 
    public void tick() {
       this.music();

@@ -6,7 +6,8 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import java.util.List;
-import net.caixukun.galmc.event.OpenUIEvent;
+import net.caixukun.galmc.network.GalNetwork;
+import net.caixukun.galmc.network.OpenGalScreenPacket;
 import net.caixukun.galmc.resource.GalResourceManger;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -15,6 +16,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
+import net.minecraftforge.network.PacketDistributor;
 
 public class CommandInit {
    private static final SuggestionProvider<CommandSourceStack> RESOURCE_PATH_SUGGESTIONS = (context, builder) -> {
@@ -33,7 +35,8 @@ public class CommandInit {
       Entity var4 = source.getEntity();
       if (var4 instanceof ServerPlayer player) {
          String newPath = resourcePath.replace("galmc_api:", "").replace("\"", "");
-         OpenUIEvent.openUI(newPath, player.getUUID());
+         GalNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
+            new OpenGalScreenPacket(newPath, false));
          return 1;
       } else {
          MinecraftServer server = source.getServer();
@@ -41,7 +44,8 @@ public class CommandInit {
          if (!players.isEmpty() && players.size() == 1) {
             ServerPlayer singlePlayer = (ServerPlayer)players.get(0);
             String newPath = resourcePath.replace("galmc_api:", "").replace("\"", "");
-            OpenUIEvent.openUI(newPath, singlePlayer.getUUID());
+            GalNetwork.CHANNEL.send(PacketDistributor.PLAYER.with(() -> singlePlayer),
+               new OpenGalScreenPacket(newPath, false));
             return 1;
          } else {
             source.sendFailure(Component.literal("不能为多个玩家播放galgame"));
