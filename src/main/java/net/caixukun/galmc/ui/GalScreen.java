@@ -115,7 +115,7 @@ public class GalScreen extends Screen {
       }
 
    }
-   
+
    public boolean isPauseScreen() {
       return false;
    }
@@ -237,6 +237,11 @@ public class GalScreen extends Screen {
    }
 
    public boolean next() {
+      if (this.core.disabled || this.core.TEXTS.isEmpty()) {
+         this.onClose();
+         return true;
+      }
+
       NextText nextText = this.core.next();
       if (nextText == null) {
          if (this.core.is_sound()) {

@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import net.caixukun.galmc.resource.GalResourceManger;
 import net.caixukun.galmc.ui.GalScreen;
 import net.caixukun.your_wife.render.character_render.CharacterMethods;
@@ -20,6 +21,7 @@ import net.minecraft.ResourceLocationException;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import org.slf4j.Logger;
 
@@ -82,62 +84,73 @@ public class Character {
    }
 
    private void readJson(ResourceManager resourceManager, ResourceLocation location) {
-      resourceManager.getResource(location).ifPresent((resource) -> {
+      Optional<Resource> optional = resourceManager.getResource(location);
+      if (optional.isEmpty()) {
+         this.disabled = true;
+         LOGGER.error("资源不存在: {}", location);
+         return;
+      }
+
+      Resource resource = optional.get();
+      try {
+         InputStream stream = resource.open();
+
          try {
-            InputStream stream = resource.open();
-
-            try {
-               JsonElement json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
-               JsonObject jsonObject = (JsonObject)GSON.fromJson(json, JsonObject.class);
-               this.type = jsonObject.get("type").getAsString();
-               this.render_execute = jsonObject.get("render_execute").getAsString();
-               this.music = jsonObject.getAsJsonObject("start_music");
-               this.next = new NextText(jsonObject.getAsJsonObject("next"));
-               this.execute = new End_Execute(jsonObject.getAsJsonObject("execute"));
-               this.max = jsonObject.getAsJsonArray("data").size();
-               if (!this.is_cg()) {
-                  for(JsonElement product : jsonObject.getAsJsonArray("data")) {
-                     JsonObject item = product.getAsJsonObject();
-                     this.TEXTS.add(new TextEntry(item.get("text").getAsString(), item.getAsJsonObject("character").get("image").getAsString(), item.get("background").getAsString(), item.get("sound").getAsString(), item.getAsJsonObject("character").get("x").getAsInt(), item.getAsJsonObject("character").get("y").getAsInt(), item.getAsJsonObject("character").get("image_x").getAsInt(), item.getAsJsonObject("character").get("image_y").getAsInt(), item.getAsJsonObject("render_execute")));
-                  }
-               } else {
-                  for(JsonElement product : jsonObject.getAsJsonArray("data")) {
-                     JsonObject item = product.getAsJsonObject();
-                     this.TEXTS.add(new TextEntry((String)null, "null", item.get("background").getAsString(), item.get("sound").getAsString(), 0, 0, item.getAsJsonObject("character").get("image_x").getAsInt(), item.getAsJsonObject("character").get("image_y").getAsInt(), item.getAsJsonObject("render_execute")));
-                  }
+            JsonElement json = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8));
+            JsonObject jsonObject = (JsonObject)GSON.fromJson(json, JsonObject.class);
+            this.type = jsonObject.get("type").getAsString();
+            this.render_execute = jsonObject.get("render_execute").getAsString();
+            this.music = jsonObject.getAsJsonObject("start_music");
+            this.next = new NextText(jsonObject.getAsJsonObject("next"));
+            this.execute = new End_Execute(jsonObject.getAsJsonObject("execute"));
+            this.max = jsonObject.getAsJsonArray("data").size();
+            if (!this.is_cg()) {
+               for(JsonElement product : jsonObject.getAsJsonArray("data")) {
+                  JsonObject item = product.getAsJsonObject();
+                  this.TEXTS.add(new TextEntry(item.get("text").getAsString(), item.getAsJsonObject("character").get("image").getAsString(), item.get("background").getAsString(), item.get("sound").getAsString(), item.getAsJsonObject("character").get("x").getAsInt(), item.getAsJsonObject("character").get("y").getAsInt(), item.getAsJsonObject("character").get("image_x").getAsInt(), item.getAsJsonObject("character").get("image_y").getAsInt(), item.getAsJsonObject("render_execute")));
                }
-
-               for(JsonElement product : jsonObject.getAsJsonArray("resources")) {
-                  this.resources.add(ResourceLocation.fromNamespaceAndPath("galmc_api", product.getAsString()));
+            } else {
+               for(JsonElement product : jsonObject.getAsJsonArray("data")) {
+                  JsonObject item = product.getAsJsonObject();
+                  this.TEXTS.add(new TextEntry((String)null, "null", item.get("background").getAsString(), item.get("sound").getAsString(), 0, 0, item.getAsJsonObject("character").get("image_x").getAsInt(), item.getAsJsonObject("character").get("image_y").getAsInt(), item.getAsJsonObject("render_execute")));
                }
-            } catch (Throwable var9) {
-               if (stream != null) {
-                  try {
-                     stream.close();
-                  } catch (Throwable var8) {
-                     var9.addSuppressed(var8);
-                  }
-               }
-
-               throw var9;
             }
 
+            for(JsonElement product : jsonObject.getAsJsonArray("resources")) {
+               this.resources.add(ResourceLocation.fromNamespaceAndPath("galmc_api", product.getAsString()));
+            }
+
+            if (this.TEXTS.isEmpty()) {
+               this.disabled = true;
+               LOGGER.error("对话数据为空: {}", location);
+            }
+         } catch (Throwable var9) {
             if (stream != null) {
-               stream.close();
+               try {
+                  stream.close();
+               } catch (Throwable var8) {
+                  var9.addSuppressed(var8);
+               }
             }
-         } catch (IOException e) {
-            this.disabled = true;
-            LOGGER.error("初始化错误", e);
-         } catch (NullPointerException e) {
-            this.disabled = true;
-            LOGGER.error("初始化错误", e);
+
+            throw var9;
          }
 
-      });
+         if (stream != null) {
+            stream.close();
+         }
+      } catch (IOException e) {
+         this.disabled = true;
+         LOGGER.error("初始化错误", e);
+      } catch (NullPointerException e) {
+         this.disabled = true;
+         LOGGER.error("初始化错误", e);
+      }
+
    }
 
    public void render(GuiGraphics guiGraphics, GalScreen galScreen) {
-      if (!this.disabled && Objects.equals(this.render_execute, "null")) {
+      if (!this.disabled && !this.TEXTS.isEmpty() && this.pointer < this.TEXTS.size() && Objects.equals(this.render_execute, "null")) {
          if (this.is_cg()) {
             int screenWidth = galScreen.width;
             int screenHeight = galScreen.height;
@@ -154,6 +167,10 @@ public class Character {
    }
 
    public NextText next() {
+      if (this.disabled || this.TEXTS.isEmpty()) {
+         return this.next;
+      }
+
       if (this.render_execute == null) {
          this.render_execute = "null";
       }
@@ -180,14 +197,14 @@ public class Character {
    }
 
    public String getSound() {
-      return ((TextEntry)this.TEXTS.get(this.pointer)).sound;
+      return this.TEXTS.isEmpty() || this.pointer >= this.TEXTS.size() ? "null" : ((TextEntry)this.TEXTS.get(this.pointer)).sound;
    }
 
    public boolean is_sound() {
-      return ((TextEntry)this.TEXTS.get(this.pointer)).is_sound();
+      return !this.TEXTS.isEmpty() && this.pointer < this.TEXTS.size() && ((TextEntry)this.TEXTS.get(this.pointer)).is_sound();
    }
 
    public TextEntry get() {
-      return (TextEntry)this.TEXTS.get(this.pointer);
+      return this.TEXTS.isEmpty() || this.pointer >= this.TEXTS.size() ? null : (TextEntry)this.TEXTS.get(this.pointer);
    }
 }
